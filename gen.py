@@ -1,4 +1,5 @@
 import queue
+from secrets import randbelow
 import numpy as np
 import random
 from treeType import *
@@ -6,19 +7,31 @@ random.seed(2022)
 np.random.seed(2022)
 import pydot
 
-def preterminal_match(pres, obs, max_co, max_latent):
-    relations = []
+def preterminal_match(pres, obs, vars, max_co, latent_table):
+    pre_obs_relations = []
+    var_pre_relations = []
     for pre in pres:
         children = []
-        latent = np.random.randint(1, max_co)
+        latent = latent_table[pre]
         for j in random.sample(range(len(obs)), latent):
             children.append(obs[j])
-        dist = np.random.dirichlet(np.ones(np.random.randint(1,max_latent)))
-
+        dist = np.random.dirichlet(np.ones(latent))
         rule = {'parent':pre, 'children':children, 'dist': dist}
 
-        relations.append(rule)
-    return relations        
+        pre_obs_relations.append(rule)
+
+    for var in vars:
+        latent = latent_table[var]
+        children = np.random.choice(pres, np.random.randint(1,max_co))
+        parent_dis = np.random.dirichlet(np.ones(latent))
+        for child in children:
+            child_dis = np.random.dirichlet(np.ones(latent_table[child]))
+            parent_dis = np.multiply.outer(parent_dis, child_dis)
+
+        rule = {'parent':var, 'children':children, 'dist': parent_dis}
+        var_pre_relations.append(rule)
+    
+    return pre_obs_relations, var_pre_relations
 
 def variable_match(variable, max_co, latent_table):
     relations = []
@@ -88,8 +101,7 @@ def variable_match(variable, max_co, latent_table):
             clean.append(i)
             print(str(i['parent']) + ' --> ' + str(i['children']))
     #remove all duplicates
-    return clean
-        
+    return clean        
 
 class singleGen:
     def __init__(self, max_latent, max_axiom, max_correlation, max_depth):
@@ -102,7 +114,7 @@ class singleGen:
         self.obs_len = 3
         self.obs_amount = 1000
         self.axi_len = 3
-        self.preterminal_prop = int(0.1 * self.max_axiom)
+        self.preterminal_prop = 25
         #setting up hyperparameters
         self.obs_facts = []
         self.preterminal = []
@@ -147,6 +159,15 @@ class singleGen:
             self.same_parent_split[var]['dist'] = np.random.dirichlet(np.ones(len(self.same_parent_split[var]['children'])))
         #initialize rules and each variable to be the goal proof
 
+        self.pre_obs_relations, self.var_pre_relations = preterminal_match(self.preterminal, self.obs_facts, self.variables, self.max_correlation, self.latent_table)
+        self.same_preterminal_split = {}
+        for var in self.preterminal + self.variables:
+            self.same_preterminal_split[var] = {'children':[], 'dist':None}
+            for rule in self.pre_obs_relations + self.var_pre_relations:
+                if rule['parent'] == var:
+                    self.same_preterminal_split[var]['children'].append(rule['children'])
+            self.same_preterminal_split[var]['dist'] = np.random.dirichlet(np.ones(len(self.same_preterminal_split[var]['children'])))
+
     def get_proof(self):
         goal = Tree(np.random.choice(self.variables, 1, p=self.prior_goal_dist)[0])
         batch = [goal]
@@ -181,12 +202,64 @@ class singleGen:
             # except:
             #     print("shit happens")
             #     pass
-
         #TODO debug tomorrow
         return goal
+    
+    def get_full_tree(self, goal):
+        batch = [goal]
+        while batch != []:
+            lv = []
+            for node in batch:
+                if node.children != []:
+                    lv = lv + node.children 
+                else:
+                    var_type = node.type
+                    children_idx = np.random.choice(len(self.same_preterminal_split[var_type]['children']), 1, p=self.same_preterminal_split[var_type]['dist'])
+                    print(children_idx)
+                    print(self.same_preterminal_split[var_type]['children'][children_idx[0]])
+                    children = self.same_preterminal_split[var_type]['children'][children_idx[0]]
+                    childrenset = set(children)
+                    print(childrenset)
+                    for type in childrenset:
+                        idx = 0
+                        for child in children:
+                            print(child in self.preterminal)
+                            if type == child:
+                                subtree = Tree(type)
+                                subtree.set_prefix(str(idx))
+                                node.add_child(subtree)
+                                idx = idx + 1
+                    for child in node.children:
+                        var_type = child.type
+                        print(var_type in self.preterminal)
+                        children_idx = np.random.choice(len(self.same_preterminal_split[var_type]['children']), 1, p=self.same_preterminal_split[var_type]['dist'])
+                        children = self.same_preterminal_split[var_type]['children'][children_idx[0]]
+                        childrenset = set(children)
+                        print(childrenset)
+                        print('test')
+                        for type in childrenset:
+                            idx = 0
+                            for grand_child in children:
+                                print(grand_child in self.obs_facts)
+                                if type == grand_child:
+                                    subtree = Tree(type)
+                                    subtree.set_prefix(str(idx))
+                                    child.add_child(subtree)
+                                    idx = idx + 1
+            batch = lv
+        return goal
+
+
+def print_rule(relations):
+
+    for i in relations:
+        print(str(i['parent']) + ' --> ' + str(i['children']))
 
 
 test = singleGen(5,20,5,3)
 #print(test.obs_facts)
 a = test.get_proof()
-draw_tree(a)
+print_rule(test.pre_obs_relations)
+print_rule(test.var_pre_relations)
+b = test.get_full_tree(a)
+draw_tree(b)
