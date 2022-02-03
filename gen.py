@@ -3,9 +3,17 @@ from secrets import randbelow
 import numpy as np
 import random
 from treeType import *
+from utils import *
+from tqdm import tqdm
+import time
+import pydot
+import pickle
+
 random.seed(2022)
 np.random.seed(2022)
-import pydot
+
+
+np.set_printoptions(threshold=np.inf)
 
 def preterminal_match(pres, obs, vars, max_co, latent_table):
     pre_obs_relations = []
@@ -112,8 +120,8 @@ class singleGen:
         self.axiom_chr = 'abcdefghijklmnopqrstuvwxyz'
         self.observed_chr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.obs_len = 3
-        self.obs_amount = 1000
-        self.axi_len = 3
+        self.obs_amount = 50
+        self.axi_len = 5
         self.preterminal_prop = 25
         #setting up hyperparameters
         self.obs_facts = []
@@ -168,11 +176,15 @@ class singleGen:
                     self.same_preterminal_split[var]['children'].append(rule['children'])
             self.same_preterminal_split[var]['dist'] = np.random.dirichlet(np.ones(len(self.same_preterminal_split[var]['children'])))
 
+        self.rules = self.pre_obs_relations + self.var_pre_relations + self.variables_rules
+        self.types = self.preterminal + self.variables
+
     def get_proof(self):
         goal = Tree(np.random.choice(self.variables, 1, p=self.prior_goal_dist)[0])
+        goal.set_root()
         batch = [goal]
         for i in range(self.max_depth):
-            print(i)
+            #print(i)
             next_lvl = []
             for var in batch:
                 var_type = var.type
@@ -182,7 +194,7 @@ class singleGen:
                 children_idx = np.random.choice(len(self.same_parent_split[var_type]['children']), 1, p=self.same_parent_split[var_type]['dist'])
                 #print(children_idx[0])
                 children = self.same_parent_split[var_type]['children'][children_idx[0]].tolist()
-                print(children)
+                #print(children)
 
                 childrenset = set(children)
                 for type in childrenset:
@@ -194,11 +206,11 @@ class singleGen:
                             subtree.set_suffix(str(i))
                             var.add_child(subtree)
                             next_lvl.append(subtree)
-                            print(subtree.name)
+                            #print(subtree.name)
                             idx = idx + 1
                 #Assinging different idx to same type variable within 1 rule eg: a --> b b b ==> a --> 0-b 1-b 2-b
             batch = next_lvl
-            print(len(batch))
+            #print(len(batch))
             # except:
             #     print("shit happens")
             #     pass
@@ -215,15 +227,15 @@ class singleGen:
                 else:
                     var_type = node.type
                     children_idx = np.random.choice(len(self.same_preterminal_split[var_type]['children']), 1, p=self.same_preterminal_split[var_type]['dist'])
-                    print(children_idx)
-                    print(self.same_preterminal_split[var_type]['children'][children_idx[0]])
+                    #print(children_idx)
+                    #print(self.same_preterminal_split[var_type]['children'][children_idx[0]])
                     children = self.same_preterminal_split[var_type]['children'][children_idx[0]]
                     childrenset = set(children)
-                    print(childrenset)
+                    #print(childrenset)
                     for type in childrenset:
                         idx = 0
                         for child in children:
-                            print(child in self.preterminal)
+                            #print(child in self.preterminal)
                             if type == child:
                                 subtree = Tree(type)
                                 subtree.set_prefix(str(idx))
@@ -231,16 +243,16 @@ class singleGen:
                                 idx = idx + 1
                     for child in node.children:
                         var_type = child.type
-                        print(var_type in self.preterminal)
+                        #print(var_type in self.preterminal)
                         children_idx = np.random.choice(len(self.same_preterminal_split[var_type]['children']), 1, p=self.same_preterminal_split[var_type]['dist'])
                         children = self.same_preterminal_split[var_type]['children'][children_idx[0]]
                         childrenset = set(children)
-                        print(childrenset)
-                        print('test')
+                        #print(childrenset)
+                        #print('test')
                         for type in childrenset:
                             idx = 0
                             for grand_child in children:
-                                print(grand_child in self.obs_facts)
+                                #print(grand_child in self.obs_facts)
                                 if type == grand_child:
                                     subtree = Tree(type)
                                     subtree.set_prefix(str(idx))
@@ -255,11 +267,37 @@ def print_rule(relations):
     for i in relations:
         print(str(i['parent']) + ' --> ' + str(i['children']))
 
+def batch_generation():
+    test = singleGen(5,20,5,3)
+    data = {'train':[], 'dev':[], 'test':[], 'program': test}
+    
+    total = 1000
+    for i in tqdm(range(total), desc = 'tqdm() Progress Bar'):
+        a = test.get_proof()
+        b = test.get_full_tree(a)
+        
+        if i <0.8*total:
+            data['train'].append(b)
+        elif i>0.8*total and i<0.9*total:
+            data['dev'].append(b)
+        else:
+            data['test'].append(b)
+    
+    with open('data.pkl', 'wb') as f:
+        pickle.dump(data, f)
+
+
 
 test = singleGen(5,20,5,3)
 #print(test.obs_facts)
 a = test.get_proof()
-print_rule(test.pre_obs_relations)
-print_rule(test.var_pre_relations)
+#print_rule(test.pre_obs_relations)
+#print_rule(test.var_pre_relations)
 b = test.get_full_tree(a)
-draw_tree(b)
+bec = b.children[0].get_inside()
+vec = b.children[0].get_outside()
+print(bec)
+print(vec)
+#print(feature_gen(bec, test.obs_facts + test.preterminal + test.variables, 10000))
+print(len(test.obs_facts + test.preterminal + test.variables))
+#batch_generation()
