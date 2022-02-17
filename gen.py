@@ -24,6 +24,7 @@ def preterminal_match(pres, obs, vars, max_co, latent_table):
         for j in random.sample(range(len(obs)), latent):
             children.append(obs[j])
         dist = np.random.dirichlet(np.ones(latent))
+        children = sorted(children)
         rule = {'parent':pre, 'children':children, 'dist': dist}
 
         pre_obs_relations.append(rule)
@@ -32,10 +33,11 @@ def preterminal_match(pres, obs, vars, max_co, latent_table):
         latent = latent_table[var]
         children = np.random.choice(pres, np.random.randint(1,max_co))
         parent_dis = np.random.dirichlet(np.ones(latent))
+        children = sorted(children)
         for child in children:
             child_dis = np.random.dirichlet(np.ones(latent_table[child]))
             parent_dis = np.multiply.outer(parent_dis, child_dis)
-
+        
         rule = {'parent':var, 'children':children, 'dist': parent_dis}
         var_pre_relations.append(rule)
     
@@ -47,7 +49,7 @@ def variable_match(variable, max_co, latent_table):
         parent_latent = latent_table[var]
         chilren_num = np.random.randint(1,max_co)
         children = np.random.choice(variable, chilren_num) # using sample with replacement to allow recursiveness
-
+        children = sorted(children)
         parent_dis = np.random.dirichlet(np.ones(parent_latent))
         for child in children:
             child_dis = np.random.dirichlet(np.ones(latent_table[child]))
@@ -63,7 +65,7 @@ def variable_match(variable, max_co, latent_table):
         var = rule['parent']
         parent_latent = latent_table[var]
         children = np.random.choice(variable, chilren_num) # using sample with replacement to allow recursiveness
-
+        children = sorted(children)
         parent_dis = np.random.dirichlet(np.ones(parent_latent))
         for child in children:
             child_dis = np.random.dirichlet(np.ones(latent_table[child]))
@@ -76,6 +78,7 @@ def variable_match(variable, max_co, latent_table):
     multi_proof = np.random.choice(relations, 5)
     for rule in multi_proof:
         children = rule['children']
+        children = sorted(children)
         var = np.random.choice(variable, 1)[0]
         parent_latent = latent_table[var]
 
@@ -120,9 +123,9 @@ class singleGen:
         self.axiom_chr = 'abcdefghijklmnopqrstuvwxyz'
         self.observed_chr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.obs_len = 3
-        self.obs_amount = 50
+        self.obs_amount = 40
         self.axi_len = 5
-        self.preterminal_prop = 25
+        self.preterminal_prop = 20
         #setting up hyperparameters
         self.obs_facts = []
         self.preterminal = []
@@ -193,7 +196,8 @@ class singleGen:
                 #print(self.same_parent_split[var]['dist'])
                 children_idx = np.random.choice(len(self.same_parent_split[var_type]['children']), 1, p=self.same_parent_split[var_type]['dist'])
                 #print(children_idx[0])
-                children = self.same_parent_split[var_type]['children'][children_idx[0]].tolist()
+                children = self.same_parent_split[var_type]['children'][children_idx[0]]
+                children = sorted(children)
                 #print(children)
 
                 childrenset = set(children)
@@ -230,6 +234,7 @@ class singleGen:
                     #print(children_idx)
                     #print(self.same_preterminal_split[var_type]['children'][children_idx[0]])
                     children = self.same_preterminal_split[var_type]['children'][children_idx[0]]
+                    children = sorted(children)
                     childrenset = set(children)
                     #print(childrenset)
                     for type in childrenset:
@@ -246,6 +251,7 @@ class singleGen:
                         #print(var_type in self.preterminal)
                         children_idx = np.random.choice(len(self.same_preterminal_split[var_type]['children']), 1, p=self.same_preterminal_split[var_type]['dist'])
                         children = self.same_preterminal_split[var_type]['children'][children_idx[0]]
+                        children = sorted(children)
                         childrenset = set(children)
                         #print(childrenset)
                         #print('test')
@@ -300,4 +306,4 @@ print(bec)
 print(vec)
 #print(feature_gen(bec, test.obs_facts + test.preterminal + test.variables, 10000))
 print(len(test.obs_facts + test.preterminal + test.variables))
-#batch_generation()
+batch_generation()

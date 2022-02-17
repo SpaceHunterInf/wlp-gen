@@ -1,4 +1,4 @@
-import imp
+import pickle
 from itertools import count
 from pickletools import read_bytes1
 import numpy as np
@@ -44,6 +44,8 @@ def svd_info(data, rules, types, in_max, out_max, k):
         res[type]['s'] = s
         res[type]['vt'] = vt
     
+
+    #I NEED TO FLIP THE SIGN OF THE NEGATIVE PROBABILITIES
     return res
 
 def opt_svd(data, types, obs, in_max, out_max, max_k):
@@ -92,7 +94,13 @@ def opt_svd(data, types, obs, in_max, out_max, max_k):
             
             res[type]['in_project'] = res[type]['u']
             res[type]['out_project'] = np.reciprocal(res[type]['s']).reshape(-1,1) * res[type]['vt']
-                
+        
+
+        with open('res.pkl','wb') as f:
+            pickle.dump(res,f)
+        with open('mat.pkl','wb') as f:
+            pickle.dump(type_matrix,f)
+
         return res, type_matrix
 
 def list_eq(a,b):
@@ -105,7 +113,7 @@ def rule_eq(p1, p2, c1, c2):
     return list_eq(p1,p2) and list_eq(c1,c2)
 
 class spectral(object):
-    def __init__(self, data, program, in_max, out_max, max_K, res, mat):
+    def __init__(self, data, program, in_max, out_max, max_K):
         # data is the input of M training examples, a list of proof trees
         # program is the L-WLP only contains types and rules
         self.data = data
@@ -114,7 +122,12 @@ class spectral(object):
         self.outmax = out_max
         self.k = max_K
         self.add_one() # perform add 1 smoothing
-        self.res, self.mat = res, mat
+        self.res, self.mat = opt_svd(data, program.types, program.obs_facts, in_max, out_max, max_K)
+
+        # with open('res.pkl','rb') as f:
+        #     self.res = pickle.load(f)
+        # with open('mat.pkl','rb') as f:
+        #     self.mat = pickle.load(f)
 
     def add_one(self):
         #basic add one smoothing
@@ -141,7 +154,7 @@ class spectral(object):
                 for tree in batch:
                     tmp_parent = [tree]
                     tmp_parent_rule = [x.type for x in tmp_parent]
-                    tmp_children = [x for x in tree.children if x.type.isupper() == False]
+                    tmp_children = [x for x in tree.children] #if x.type.isupper() == False]
                     tmp_children_rule = [x.type for x in tmp_children]
 
                     for rule in relations:
@@ -157,10 +170,13 @@ class spectral(object):
                                         aligned_children.append(c2)
                                         break
                             
-                            for c in aligned_children:
-                                #print(c.type)
-                                in_projected = feature_gen(c.get_inside(), self.program.types + self.program.obs_facts, self.inmax).dot(self.res[c.type]['in_project'])
-                                out_projected = np.multiply.outer(out_projected, in_projected)
+                            if all([c.isupper() for c in rule['children']]):
+                                pass
+                            else:
+                                for c in aligned_children:
+                                    #print(c.type)
+                                    in_projected = feature_gen(c.get_inside(), self.program.types + self.program.obs_facts, self.inmax).dot(self.res[c.type]['in_project'])
+                                    out_projected = np.multiply.outer(out_projected, in_projected)
                             
                             if rule['param'].shape != out_projected.shape:
                                 #print(rule['parent'])
@@ -177,7 +193,30 @@ class spectral(object):
         for rule in relations:
             total_count = 0
             for p in rule['parent']:
+                #print(p)
                 total_count = total_count + self.mat[p]['count']
             rule['param'] = rule['param'] / total_count
+
+
+        #get root probabilities
+        root_rules = []
+        types = []
+        for tree in self.data:
+            if tree.root:
+                types.append(tree.type)
+        
+        for i in set(types):
+            param = np.zeros(tuple([len(self.res[i]['s'])]))
+            count = 0
+            for tree in self.data:
+                if tree.type == i:
+                    in_projected = feature_gen(tree.get_inside(), self.program.types + self.program.obs_facts, self.inmax).dot(self.res[tree.type]['in_project'])
+                    param = param + in_projected
+                    count = count + 1
+            
+            rule = {'parent':[i], 'children':['root'], 'param':param / len(self.data), 'count':count}
+            root_rules.append(rule)
+
+        relations = relations + root_rules
 
         return relations
