@@ -6,8 +6,9 @@ import torch
 import numpy as np
 import collections
 import time
+import pickle
 
-class Pdg(object):
+class Pgd(object):
 
     def __init__(self, data, test, rules, latent, max_itr, learning_rate):
         #use log parameters for unconstrained optimization
@@ -263,3 +264,17 @@ class Pdg(object):
         recall = recall + rec
         
         return precision, recall
+
+ if __name__ == "__main__":
+    with open('data.pkl', 'rb') as f:
+        data = pickle.load(f)
+
+    pgd = Pgd(data['train'], data['test'], data['program'].rules, 5, 1000, 0.1)
+
+    for i in range(1000):
+        pgd.train()
+    
+    f = open('out.txt','w')
+    print(pgd.micro_avg(), file=f) 
+    print(pgd.macro_avg(), file=f)
+    f.close()
