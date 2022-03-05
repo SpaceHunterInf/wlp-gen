@@ -265,7 +265,7 @@ class Pgd(object):
         
         return precision, recall
 
- if __name__ == "__main__":
+if __name__ == "__main__":
     with open('data.pkl', 'rb') as f:
         data = pickle.load(f)
 
