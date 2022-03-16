@@ -9,8 +9,8 @@ import time
 import pydot
 import pickle
 
-random.seed(2022)
-np.random.seed(2022)
+# random.seed(2022)
+# np.random.seed(2022)
 
 
 np.set_printoptions(threshold=np.inf)
@@ -273,7 +273,7 @@ def print_rule(relations):
     for i in relations:
         print(str(i['parent']) + ' --> ' + str(i['children']))
 
-def batch_generation():
+def batch_generation(number):
     test = singleGen(5,20,5,3)
     data = {'train':[], 'dev':[], 'test':[], 'program': test}
     
@@ -289,21 +289,23 @@ def batch_generation():
         else:
             data['test'].append(b)
     
-    with open('data.pkl', 'wb') as f:
+    with open('data-{}.pkl'.format(number), 'wb') as f:
         pickle.dump(data, f)
 
 
-
-test = singleGen(5,20,5,3)
-#print(test.obs_facts)
-a = test.get_proof()
-#print_rule(test.pre_obs_relations)
-#print_rule(test.var_pre_relations)
-b = test.get_full_tree(a)
-bec = b.children[0].get_inside()
-vec = b.children[0].get_outside()
-print(bec)
-print(vec)
-#print(feature_gen(bec, test.obs_facts + test.preterminal + test.variables, 10000))
-print(len(test.obs_facts + test.preterminal + test.variables))
-batch_generation()
+#if __name__ == "__main__":
+    #for i in range(5):
+        #test = singleGen(5,20,5,3)
+        #print(test.obs_facts)
+        # a = test.get_proof()
+        #print_rule(test.pre_obs_relations)
+        #print_rule(test.var_pre_relations)
+        # b = test.get_full_tree(a)
+        # bec = b.children[0].get_inside()
+        # vec = b.children[0].get_outside()
+        # print(bec)
+        # print(vec)
+        #print(feature_gen(bec, test.obs_facts + test.preterminal + test.variables, 10000))
+        #print(len(test.obs_facts + test.preterminal + test.variables))
+        #print('ccccccccccccccccccccc')
+        #batch_generation(i)
