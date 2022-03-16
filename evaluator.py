@@ -144,15 +144,22 @@ def get_obs_var(tree):
             batch = lv
         return obs
 
+def softmax(x):
+    return np.exp(x)/sum(np.exp(x))
 
 def get_best_parse(obs, parameters, root_parameters):
+    for rule in parameters:
+        rule['param'] = softmax(rule['param'])
+    for rule in root_parameters:
+        rule['param'] = softmax(rule['param'])
+
     current_parents = obs
     current_types = [x.type for x in obs]
     res = None
     ans = []
-    for i in range(5): # iterate through 5 levels at most
+    for i in range(6): 
         ranking = []
-        for j in range(5): # beam search width = 5
+        for j in range(6): 
             types, parents = agenda_search(current_parents, parameters)
             score = -100
             for x in parents:
@@ -173,11 +180,39 @@ def get_best_parse(obs, parameters, root_parameters):
     
     return ans
 
+def get_best_parse_abs(obs, parameters, root_parameters):
+    current_parents = obs
+    current_types = [x.type for x in obs]
+    res = None
+    ans = []
+    for i in range(6): # beam search width = 5
+        ranking = []
+        for j in range(6): # height = 5
+            types, parents = agenda_search(current_parents, parameters)
+            score = -100
+            for x in parents:
+                t = x.type
+                try:
+                    if x.root:
+                        score = score + root_parameters[t].dot(inside_sweep(t, parameters))
+                    else:
+                        score = score + np.log(inside_sweep(t, parameters).dot(outside_sweep(t, parameters+root_parameters)))
+                except:
+                    pass
+            if len(parents) > 0:
+                ranking.append({'parent':parents, 'score':np.abs(score)})
+        ranking = sorted(ranking, key= lambda x: x['score'], reverse=True)
+        if len(ranking) > 0:
+            current_parents = ranking[0]['parent']
+            ans = ans + [p.type for p in current_parents]
+    return ans
+
 class evaluator(object):
-    def __init__(self, parameters, root_parameters, data):
+    def __init__(self, parameters, root_parameters, data, parse_method):
         self.parameters = parameters
         self.root_parameters = root_parameters
         self.data = data
+        self.parse_method = parse_method
         self.rules = None
 
     def macro_avg(self):
@@ -186,7 +221,7 @@ class evaluator(object):
         for i in tqdm(range(len(self.data)), desc = 'tqdm() Progress Bar'):
             tree = self.data[i]
             golden = all_nodes(tree)
-            parsed_types = get_best_parse(get_obs_var(tree), self.parameters, self.root_parameters)
+            parsed_types = self.parse_method(get_obs_var(tree), self.parameters, self.root_parameters)
             golden_types = [x.type for x in golden]
 
             parse_count = collections.Counter(parsed_types)
@@ -219,7 +254,7 @@ class evaluator(object):
         for i in tqdm(range(len(self.data)), desc = 'tqdm() Progress Bar'):
             tree = self.data[i]
             golden = all_nodes(tree)
-            parsed_types = parsed_types + get_best_parse(get_obs_var(tree), self.parameters, self.root_parameters)
+            parsed_types = parsed_types + self.parse_method(get_obs_var(tree), self.parameters, self.root_parameters)
             golden_types = golden_types + [x.type for x in golden]
 
         parse_count = collections.Counter(parsed_types)
@@ -244,9 +279,6 @@ class evaluator(object):
         
         return precision, recall
         
-
-    
-print(dfs_parse([1, 2, 3], [[1, 2], [1], [2], [3], [1,2,3,4,5], [1,3]]))
         
                             
                         
