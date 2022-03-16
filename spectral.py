@@ -7,6 +7,7 @@ from tqdm import tqdm
 from evaluator import *
 from gen import *
 import sys
+import json
 
 def t_svd(inside, outside, k):
     sigma = np.outer(inside, outside)
@@ -214,7 +215,7 @@ class spectral(object):
 
 if __name__ == "__main__":
     sys.setrecursionlimit(10000)
-    f = open('out_spectral.txt','w')
+    results = {}
     for i in range(5):
         with open('data-{}.pkl'.format(i), 'rb') as f:
             data = pickle.load(f)
@@ -223,14 +224,10 @@ if __name__ == "__main__":
         parameters = spectral.param_estimate()
         root_parameters = [x for x in parameters if x['children'] == ['root']]
         test = evaluator(parameters, parameters, data['test'], get_best_parse)
-
         print('data-{}'.format(i))
-        
-        print(test.micro_avg(), file=f) 
-        print(test.macro_avg(), file=f)
-
         test_abs = evaluator(parameters, parameters, data['test'], get_best_parse_abs)
-        print(test_abs.micro_avg(), file=f)
-        print(test_abs.macro_avg(), file=f)
+        results[i] = [test.micro_avg, test.macro_avg, test_abs.micro_avg(), test_abs.macro_avg()]
 
-    f.close()
+    with open('out_spectral.txt', 'w') as f:
+        json.dump(results, f)
+
