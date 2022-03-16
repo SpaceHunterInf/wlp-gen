@@ -20,6 +20,7 @@ class Pgd(object):
         self.latent = latent
         self.parameters = [] #parameters are in log
         self.lr = learning_rate
+        self.mode = 'count'
 
         self.root_parameters = [] #parameters are in log 
         self.logsoftmax = torch.nn.LogSoftmax()
@@ -166,7 +167,7 @@ class Pgd(object):
             start_time = time.time()
             for tree in self.data[:100]:
                 nll = self.forward(tree)
-                print(nll)
+                #print(nll)
                 nll.backward()
                 avg_nll += nll
                 for rule in self.parameters:
@@ -178,7 +179,7 @@ class Pgd(object):
                                 #print(rule['param'])
                                 #tmp_grad = rule['param'] - self.lr * rule['param'].grad
                                 #perform projected gradient descent
-                                print(rule['param'].grad)
+                                #print(rule['param'].grad)
                                 #rule['param'] = tmp_grad
                             rule['count'] += 1
                             rule['param'].grad.zero_()
@@ -186,7 +187,7 @@ class Pgd(object):
                     #except:pass
             avg_nll = avg_nll / len(self.data)
             print('Time Elapsed:{}'.format(time.time() - start_time))
-            print('Avg NLL:{}'.format(avg_nll))
+            #print('Avg NLL:{}'.format(avg_nll))
     
     def predict(self, obs):
         ans = []
@@ -194,7 +195,7 @@ class Pgd(object):
         lv_count = 0
         
         while batch !=[] and lv_count <5:
-            a, _ = self.approximate_search(batch, 'count')
+            a, _ = self.approximate_search(batch, self.mode)
             ans = ans + a
             batch = a
             lv_count +=1
@@ -266,15 +267,22 @@ class Pgd(object):
         return precision, recall
 
 if __name__ == "__main__":
-    with open('data.pkl', 'rb') as f:
-        data = pickle.load(f)
+    sys.setrecursionlimit(10000)
+    results = {}
+    for i in range(5):
+        with open('data-{}.pkl'.format(i), 'rb') as f:
+            data = pickle.load(f)
 
-    pgd = Pgd(data['train'], data['test'], data['program'].rules, 5, 1000, 0.1)
-
-    for i in range(1000):
-        pgd.train()
-    
-    f = open('out.txt','w')
-    print(pgd.micro_avg(), file=f) 
-    print(pgd.macro_avg(), file=f)
-    f.close()
+        pgd = Pgd(data['train'], data['test'], data['program'].rules, 5, 1000, 0.1)
+        print('data-{}'.format(i))
+        for i in range(1000):
+            pgd.train()
+        
+        result = []
+        result.append(pgd.micro_avg())
+        result.append(pgd.macro_avg())
+        pgd.mode = 'bag'
+        result.append(pgd.micro_avg())
+        result.append(pgd.macro_avg())
+    with open('out_pgd.txt', 'w') as f:
+        json.dump(results, f)
