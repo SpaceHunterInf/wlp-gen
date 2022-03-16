@@ -220,8 +220,8 @@ if __name__ == "__main__":
         with open('data-{}.pkl'.format(i), 'rb') as f:
             data = pickle.load(f)
 
-        spectral = spectral(data['train'], data['program'], 1000, 2000, 5)
-        parameters = spectral.param_estimate()
+        spec = spectral(data['train'], data['program'], 1000, 2000, 5)
+        parameters = spec.param_estimate()
         root_parameters = [x for x in parameters if x['children'] == ['root']]
         test = evaluator(parameters, parameters, data['test'], get_best_parse)
         print('data-{}'.format(i))
