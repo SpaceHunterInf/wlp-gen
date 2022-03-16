@@ -105,15 +105,6 @@ def opt_svd(data, types, obs, in_max, out_max, max_k):
 
         return res, type_matrix
 
-def list_eq(a,b):
-    c = copy.deepcopy(a)
-    d = copy.deepcopy(b)
-    #make a deep copy or the original order is messed up, cuz sorted() is inplace
-    return sorted(c) == sorted(d)
-
-def rule_eq(p1, p2, c1, c2):
-    return list_eq(p1,p2) and list_eq(c1,c2)
-
 class spectral(object):
     def __init__(self, data, program, in_max, out_max, max_K):
         # data is the input of M training examples, a list of proof trees

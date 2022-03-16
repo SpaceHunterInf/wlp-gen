@@ -94,10 +94,7 @@ def compare_rules(rule1, rule2):
     return False
 
 def list_eq(a,b):
-    c = copy.deepcopy(a)
-    d = copy.deepcopy(b)
-    #make a deep copy or the original order is messed up, cuz sorted() is inplace
-    return sorted(c) == sorted(d)
+    return sorted(a) == sorted(b)
 
 def rule_eq(p1, p2, c1, c2):
     return list_eq(p1,p2) and list_eq(c1,c2)
