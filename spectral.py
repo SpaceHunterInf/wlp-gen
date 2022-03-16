@@ -1,14 +1,12 @@
 import pickle
-from itertools import count
-from pickletools import read_bytes1
 import numpy as np
 from scipy.sparse.linalg import svds
 from treeType import *
 from utils import *
-import copy
 from tqdm import tqdm
 from evaluator import *
 from gen import *
+import sys
 
 def t_svd(inside, outside, k):
     sigma = np.outer(inside, outside)
@@ -215,6 +213,7 @@ class spectral(object):
         return relations
 
 if __name__ == "__main__":
+    sys.setrecursionlimit(10000)
     f = open('out_spectral.txt','w')
     for i in range(5):
         with open('data-{}.pkl'.format(i), 'rb') as f:
