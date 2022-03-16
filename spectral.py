@@ -226,7 +226,7 @@ if __name__ == "__main__":
         test = evaluator(parameters, parameters, data['test'], get_best_parse)
         print('data-{}'.format(i))
         test_abs = evaluator(parameters, parameters, data['test'], get_best_parse_abs)
-        results[i] = [test.micro_avg, test.macro_avg, test_abs.micro_avg(), test_abs.macro_avg()]
+        results[i] = [test.micro_avg(), test.macro_avg(), test_abs.micro_avg(), test_abs.macro_avg()]
 
     with open('out_spectral.txt', 'w') as f:
         json.dump(results, f)
