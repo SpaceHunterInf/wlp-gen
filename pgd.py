@@ -277,7 +277,7 @@ if __name__ == "__main__":
 
         pgd = Pgd(data['train'], data['test'], data['program'].rules, 5, 1000, 0.1)
         print('data-{}'.format(i))
-        for i in range(1000):
+        for i in range(1):
             pgd.train()
         
         result = []
@@ -286,5 +286,6 @@ if __name__ == "__main__":
         pgd.mode = 'bag'
         result.append(pgd.micro_avg())
         result.append(pgd.macro_avg())
+        results[i] = result
     with open('out_pgd.txt', 'w') as f:
         json.dump(results, f)
