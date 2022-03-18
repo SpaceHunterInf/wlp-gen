@@ -6,6 +6,8 @@ from utils import *
 from treeType import *
 import math
 import random
+import pickle,sys,json
+from gen import *
 
 np.random.seed(2022)
 
@@ -146,3 +148,25 @@ class EM(object):
                 tmp['param'] = tmp['param'] / tmp['count']
         
         self.root_parameters = new_root_param
+
+
+if __name__ == "__main__":
+    sys.setrecursionlimit(10000)
+    results = {}
+    for i in range(5):
+        with open('data-{}.pkl'.format(i),'rb') as f:
+            data = pickle.load(f)
+        model = EM(1000, data['train'], data['program'].rules, 5, data['program'])
+
+        for j in range(1000):
+            model.expectation_step()
+            model.maximization_step()
+        parameters = model.parameters
+        root_parameters = model.root_parameters
+
+        test = evaluator(parameters, root_parameters, data['test'], get_best_parse)
+        print('data-{}'.format(i))
+        results[i] = [test.micro_avg(), test.macro_avg()]
+
+    with open('out_em.txt', 'w') as f:
+        json.dump(results, f)
