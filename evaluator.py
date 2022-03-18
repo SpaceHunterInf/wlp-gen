@@ -239,8 +239,8 @@ class evaluator(object):
                         correct_count[t] = golden_count[t]
                         total_correct = total_correct + golden_count[t]
 
-            pre = total_correct/len(parsed_types)
-            rec = total_correct/len(golden_types)
+            pre = total_correct/(len(parsed_types) + 1e-9)
+            rec = total_correct/(len(golden_types) + 1e-9)
             precision = precision + pre
             recall = recall + rec
         
@@ -272,8 +272,8 @@ class evaluator(object):
                     correct_count[t] = golden_count[t]
                     total_correct = total_correct + golden_count[t]
 
-        pre = total_correct/len(parsed_types)
-        rec = total_correct/len(golden_types)
+        pre = total_correct/(len(parsed_types) + 1e-9)
+        rec = total_correct/(len(golden_types) + 1e-9)
         precision = precision + pre
         recall = recall + rec
         
