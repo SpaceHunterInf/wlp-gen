@@ -6,6 +6,7 @@ from utils import *
 from tqdm import tqdm
 from evaluator import *
 from gen import *
+from pgd import *
 import sys
 import json
 
@@ -223,10 +224,19 @@ if __name__ == "__main__":
         spec = spectral(data['train'], data['program'], 1000, 2000, 5)
         parameters = spec.param_estimate()
         root_parameters = [x for x in parameters if x['children'] == ['root']]
-        test = evaluator(parameters, parameters, data['test'], get_best_parse)
+        # test = evaluator(parameters, parameters, data['test'], get_best_parse)
         print('data-{}'.format(i))
-        test_abs = evaluator(parameters, parameters, data['test'], get_best_parse_abs)
-        results[i] = [test.micro_avg(), test.macro_avg(), test_abs.micro_avg(), test_abs.macro_avg()]
+        # test_abs = evaluator(parameters, parameters, data['test'], get_best_parse_abs)
+        # results[i] = [test.micro_avg(), test.macro_avg(), test_abs.micro_avg(), test_abs.macro_avg()]
+
+        pgd = Pgd(data['train'], data['test'], data['program'].rules, 5, 1000, 0.1)
+        pgd.parameters = parameters
+        pgd.root_parameters = root_parameters
+        
+        result = []
+        result.append(pgd.micro_avg())
+        result.append(pgd.macro_avg())
+        results[i] = result
 
     with open('out_spectral.txt', 'w') as f:
         json.dump(results, f)
